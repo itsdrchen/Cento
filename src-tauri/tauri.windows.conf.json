@@ -1,6 +1,5 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "_comment": "Windows-only overrides merged on top of tauri.conf.json. Removes the macOS-only overlay title bar so Cento gets a standard Windows title bar instead.",
   "app": {
     "windows": [
       {
