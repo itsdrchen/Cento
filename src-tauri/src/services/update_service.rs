@@ -97,12 +97,20 @@ pub async fn check() -> Result<UpdateInfo, String> {
         .to_string();
     let has_update = is_newer(&latest_version, &current_version);
 
-    // Prefer a .dmg asset; the user is on macOS so other archives aren't
-    // useful here.
+    // Pick the installer matching the running OS. Falls back to None if the
+    // release doesn't have an asset for this platform — UI then shows the
+    // GitHub release page link instead of a direct download.
+    #[cfg(target_os = "macos")]
+    let want_ext = ".dmg";
+    #[cfg(target_os = "windows")]
+    let want_ext = ".msi";
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    let want_ext = ".AppImage";
+
     let asset_url = release
         .assets
         .iter()
-        .find(|a| a.name.to_lowercase().ends_with(".dmg"))
+        .find(|a| a.name.to_lowercase().ends_with(want_ext))
         .map(|a| a.browser_download_url.clone());
 
     Ok(UpdateInfo {

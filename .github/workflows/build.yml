@@ -1,0 +1,93 @@
+name: Build & Release
+
+# Trigger on tag pushes that look like a version, e.g. v0.2.0, v1.0.0-beta.1.
+# We deliberately don't auto-build on every commit — that would burn CI minutes
+# and clutter Releases. Tag → release is the explicit signal.
+on:
+  push:
+    tags:
+      - 'v*'
+  # Manual trigger for testing the workflow without cutting a release.
+  # Run via GitHub UI: Actions → Build & Release → Run workflow.
+  workflow_dispatch:
+
+# Need permission to upload built artifacts to GitHub Releases.
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      # Don't cancel the macOS build just because the Windows build failed
+      # (or vice versa). Each platform stands on its own.
+      fail-fast: false
+      matrix:
+        include:
+          # macOS Apple Silicon (M-series). The previous v0.1.0 DMG was already
+          # this target, so we keep it as the primary mac build.
+          - platform: macos-latest
+            target: aarch64-apple-darwin
+            name: macOS-AppleSilicon
+          # Windows x64. WebView2 is preinstalled on windows-latest images, so
+          # no extra setup needed.
+          - platform: windows-latest
+            target: x86_64-pc-windows-msvc
+            name: Windows-x64
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      # Speeds up subsequent runs by caching Cargo's registry and the
+      # `src-tauri/target` directory. First run still takes ~5 min; cached
+      # runs drop to ~2 min.
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install frontend deps
+        run: npm install
+
+      - name: Build with Tauri
+        # `tauri-action` handles the build + bundle + (optional) release
+        # upload in one step. We point it at the existing tag so it attaches
+        # all generated installers to that release.
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: --target ${{ matrix.target }}
+          # If this run was triggered by a tag, attach artifacts to that
+          # tag's release (creating it if needed). On manual dispatch this is
+          # ignored and the binaries just stay as workflow artifacts.
+          tagName: ${{ github.ref_name }}
+          releaseName: 'Cento ${{ github.ref_name }}'
+          # Don't auto-publish — we want to manually review the draft on
+          # GitHub first (e.g. fill in release notes, mark as pre-release).
+          releaseDraft: true
+          prerelease: false
+
+      # Also upload the raw binaries as workflow artifacts so we can grab
+      # them even if the release upload step had an issue.
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ${{ matrix.name }}
+          path: |
+            src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
+            src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi
+            src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*.exe
+          if-no-files-found: ignore

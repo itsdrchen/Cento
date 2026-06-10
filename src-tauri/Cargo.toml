@@ -1,6 +1,6 @@
 [package]
 name = "cento"
-version = "0.1.0"
+version = "0.2.0"
 description = "Cento — a lightweight macOS-style RSS reader with Chinese translation via DeepSeek"
 authors = ["itsdrchen <44201097+itsdrchen@users.noreply.github.com>"]
 edition = "2021"
@@ -22,7 +22,6 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-opener = "2"
 tauri-plugin-notification = "2"
-window-vibrancy = "0.6"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 rusqlite = { version = "0.31", features = ["bundled"] }

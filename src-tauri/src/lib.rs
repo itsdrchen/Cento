@@ -43,9 +43,18 @@ pub fn run() {
             // square on the menu bar because macOS only looks at alpha for
             // template images and the full-color art has no alpha holes.
             // `tray-icon@2x.png` is a 44×44 PNG of just the "C" arc.
-            let _ = TrayIconBuilder::with_id("cento-tray")
-                .icon(tauri::include_image!("icons/tray-icon@2x.png"))
-                .icon_as_template(true)
+            //
+            // `icon_as_template(true)` is a macOS-only concept (template
+            // images automatically invert for dark menu bar). On Windows the
+            // tray icon stays full-color in the system tray, so we skip it
+            // there.
+            let tray_builder = TrayIconBuilder::with_id("cento-tray")
+                .icon(tauri::include_image!("icons/tray-icon@2x.png"));
+
+            #[cfg(target_os = "macos")]
+            let tray_builder = tray_builder.icon_as_template(true);
+
+            let _ = tray_builder
                 .menu(&tray_menu)
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id.as_ref() {

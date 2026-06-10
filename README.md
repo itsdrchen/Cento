@@ -78,7 +78,16 @@ npm run tauri build   # 注册 Cento.app 的 bundle identifier 到 LaunchService
 
 ## 使用方法
 
-在Release界面下载适配你的设备的最新版本，由于没有预算，因此没有做macOS的签名认证版，安装后若显示无法打开，可在系统设置——隐私里选择「仍要打开」
+在 [Release 界面](https://github.com/itsdrchen/Cento/releases/latest) 下载适配你的设备的最新版本：
+
+| 平台 | 文件 |
+|---|---|
+| macOS · Apple Silicon (M1/M2/M3/M4) | `Cento_*_aarch64.dmg` |
+| Windows · x64（**预览版，欢迎反馈**） | `Cento_*_x64-setup.exe` 或 `Cento_*_x64_en-US.msi` |
+
+**macOS 安装**：由于没有预算，因此没有做 macOS 的签名认证版，安装后若显示无法打开，可在系统设置——隐私里选择「仍要打开」
+
+**Windows 安装**：双击 `.msi` 或 `.exe` 即可。Windows Defender 可能拦截未签名的安装包，点击「更多信息」→「仍要运行」即可。Windows 版目前为预览，主要功能可用但未在所有版本 Windows 上验证，欢迎在 issue 反馈问题。
 
 ## 界面介绍
 

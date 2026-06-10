@@ -449,7 +449,6 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
- "window-vibrancy",
 ]
 
 [[package]]

@@ -71,12 +71,14 @@ pub async fn translate_summary(
 }
 
 #[tauri::command]
-pub fn open_url(url: String) -> Result<(), String> {
-    std::process::Command::new("open")
-        .arg(&url)
-        .spawn()
-        .map_err(|e| format!("无法打开链接: {}", e))?;
-    Ok(())
+pub fn open_url(app: AppHandle, url: String) -> Result<(), String> {
+    // Delegate to tauri-plugin-opener — it knows how to talk to the right
+    // shell on every platform (`open` on macOS, `start` on Windows,
+    // `xdg-open` on Linux). Beats hand-spawning a shell-specific binary.
+    use tauri_plugin_opener::OpenerExt;
+    app.opener()
+        .open_url(url, None::<&str>)
+        .map_err(|e| format!("无法打开链接: {}", e))
 }
 
 /// Return the current month's aggregated token usage + computed CNY. Drives

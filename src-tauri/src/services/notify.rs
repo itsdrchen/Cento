@@ -19,10 +19,13 @@
 
 use tauri::AppHandle;
 use tauri_plugin_notification::NotificationExt;
+#[cfg(target_os = "macos")]
 use tracing::warn;
 
+#[cfg(target_os = "macos")]
 const CENTO_BUNDLE_ID: &str = "io.github.itsdrchen.cento";
 
+#[cfg(target_os = "macos")]
 fn is_in_app_bundle() -> bool {
     std::env::current_exe()
         .ok()
@@ -32,6 +35,7 @@ fn is_in_app_bundle() -> bool {
 
 /// Look up `terminal-notifier` once. Cached so we don't shell out to `which`
 /// on every notification.
+#[cfg(target_os = "macos")]
 fn terminal_notifier_path() -> Option<&'static str> {
     use std::sync::OnceLock;
     static CACHE: OnceLock<Option<String>> = OnceLock::new();
@@ -51,6 +55,7 @@ fn terminal_notifier_path() -> Option<&'static str> {
         .as_deref()
 }
 
+#[cfg(target_os = "macos")]
 fn show_via_terminal_notifier(bin: &str, title: &str, body: &str) -> Result<(), String> {
     // `-sender io.github.itsdrchen.cento` spoofs the bundle identifier so the banner
     // footer shows Cento's icon + name (the real Cento.app must exist on
@@ -74,6 +79,7 @@ fn show_via_terminal_notifier(bin: &str, title: &str, body: &str) -> Result<(), 
     Ok(())
 }
 
+#[cfg(target_os = "macos")]
 fn show_via_osascript(title: &str, body: &str) -> Result<(), String> {
     // AppleScript string literals are delimited by `"` and use `\"` for an
     // embedded quote. Backslashes also need escaping for the same reason.
@@ -104,37 +110,47 @@ fn show_via_plugin(app: &AppHandle, title: &str, body: &str) -> Result<(), Strin
         .map_err(|e| format!("发送通知失败: {}", e))
 }
 
-/// Show a system banner. Picks the right channel based on whether we're
-/// running from a real `.app` bundle (use plugin → "Cento" attribution) or a
-/// raw dev binary (use osascript → "Script Editor" attribution, but actually
-/// visible).
+/// Show a system banner. On Windows/Linux, the Tauri notification plugin is
+/// the only channel — it works straight out of the box because those
+/// platforms don't gate banner delivery on a signed `.app` bundle. On macOS
+/// we have to work around UNUserNotificationCenter silently dropping
+/// notifications from unbundled dev binaries; see the platform-specific
+/// branch below.
 pub fn show(app: &AppHandle, title: &str, body: &str) -> Result<(), String> {
-    if is_in_app_bundle() {
-        // Production path. Try the plugin; if for some reason it fails (eg.
-        // user denied permission), fall back to osascript so the user still
-        // sees *something*.
-        match show_via_plugin(app, title, body) {
-            Ok(()) => Ok(()),
-            Err(e) => {
-                warn!(error = %e, "插件通知失败，回退到 osascript");
-                show_via_osascript(title, body)
+    #[cfg(not(target_os = "macos"))]
+    {
+        return show_via_plugin(app, title, body);
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        if is_in_app_bundle() {
+            // Production path. Try the plugin; if for some reason it fails (eg.
+            // user denied permission), fall back to osascript so the user still
+            // sees *something*.
+            match show_via_plugin(app, title, body) {
+                Ok(()) => Ok(()),
+                Err(e) => {
+                    warn!(error = %e, "插件通知失败，回退到 osascript");
+                    show_via_osascript(title, body)
+                }
             }
+        } else {
+            // Dev path. UNUserNotificationCenter silently drops banners from the
+            // raw debug binary, so we have to spawn a helper that already has
+            // notification privileges.
+            //
+            // Preference order:
+            //   1. `terminal-notifier` (if installed) — supports `-sender`, so
+            //      the banner footer reads "Cento" with our app icon. This is
+            //      the only way to get proper attribution in dev without
+            //      bundling.
+            //   2. `osascript` — always available, but the banner is attributed
+            //      to "Script Editor" with its icon.
+            if let Some(bin) = terminal_notifier_path() {
+                return show_via_terminal_notifier(bin, title, body);
+            }
+            show_via_osascript(title, body)
         }
-    } else {
-        // Dev path. UNUserNotificationCenter silently drops banners from the
-        // raw debug binary, so we have to spawn a helper that already has
-        // notification privileges.
-        //
-        // Preference order:
-        //   1. `terminal-notifier` (if installed) — supports `-sender`, so
-        //      the banner footer reads "Cento" with our app icon. This is
-        //      the only way to get proper attribution in dev without
-        //      bundling.
-        //   2. `osascript` — always available, but the banner is attributed
-        //      to "Script Editor" with its icon.
-        if let Some(bin) = terminal_notifier_path() {
-            return show_via_terminal_notifier(bin, title, body);
-        }
-        show_via_osascript(title, body)
     }
 }
