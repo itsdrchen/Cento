@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44 44" width="44" height="44">
+  <!-- Template image for the macOS menu-bar tray. Solid black on transparent;
+       macOS recolors it for light/dark/active states. The shape is the same
+       "C" arc used in the app icon, sized to fill the tray slot with a small
+       optical margin. -->
+  <path
+    d="M31.6 13.0 A12 12 0 1 0 31.6 31.0"
+    fill="none"
+    stroke="#000000"
+    stroke-width="6.6"
+    stroke-linecap="round"
+  />
+</svg>

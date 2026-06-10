@@ -1,0 +1,2140 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Cento</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;0,8..60,700;1,8..60,400&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Serif+SC:wght@400;500;600;700&display=swap"
+            rel="stylesheet"
+        />
+        <link rel="stylesheet" href="styles.css" />
+        <script type="module" src="/main.js" defer></script>
+    </head>
+
+    <body data-theme="light" data-accent="coral" data-font-scale="md">
+        <!-- ── Toolbar — overlay titlebar, traffic lights at left via OS ── -->
+        <!-- padding-left:76px clears the native traffic lights; everything else is ours -->
+        <header class="toolbar chrome" data-tauri-drag-region="deep">
+            <div class="toolbar-leading">
+                <div class="capsule-group">
+                    <button
+                        id="btn-sidebar"
+                        class="capsule-btn active"
+                        title="侧栏"
+                    >
+                        <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 16 16"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.5"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            aria-hidden="true"
+                        >
+                            <rect x="2" y="3" width="12" height="10" rx="2" />
+                            <line x1="6.2" y1="3" x2="6.2" y2="13" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- App name shown by native macOS titlebar; only show contextual subtitle here -->
+            <div class="toolbar-title-group" data-tauri-drag-region="deep">
+                <div id="toolbar-subtitle" class="toolbar-subtitle" data-tauri-drag-region="deep"></div>
+            </div>
+
+            <div class="toolbar-trailing">
+                <div class="capsule-group">
+                    <button
+                        id="btn-refresh"
+                        class="capsule-btn"
+                        title="刷新所有订阅源"
+                    >
+                        <svg
+                            id="refresh-icon"
+                            width="14"
+                            height="14"
+                            viewBox="0 0 16 16"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.5"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            aria-hidden="true"
+                        >
+                            <path d="M13.2 8a5.2 5.2 0 1 1-1.6-3.7" />
+                            <path d="M13.5 2.6V5.2H10.9" />
+                        </svg>
+                    </button>
+                    <button id="btn-settings" class="capsule-btn" title="设置">
+                        <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.6"
+                            stroke-linejoin="round"
+                            aria-hidden="true"
+                        >
+                            <path
+                                d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 0 1 0 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 0 1 0-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281Z"
+                            />
+                            <circle cx="12" cy="12" r="3" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- ── App shell ───────────────────────────── -->
+        <div id="app">
+            <!-- ── Settings view ─────────────────────── -->
+            <div id="settings-view" class="settings-view hidden">
+                <nav class="settings-rail">
+                    <div class="settings-rail-heading">设置</div>
+                    <button class="settings-rail-item" data-section="feeds">
+                        <span class="rail-icon">
+                            <svg
+                                width="14"
+                                height="14"
+                                viewBox="0 0 16 16"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="1.5"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <path
+                                    d="M3 4c4.97 0 9 4.03 9 9M3 8c2.76 0 5 2.24 5 5"
+                                />
+                                <circle
+                                    cx="3.6"
+                                    cy="12.4"
+                                    r="1.1"
+                                    fill="currentColor"
+                                    stroke="none"
+                                />
+                            </svg>
+                        </span>
+                        订阅源设置
+                    </button>
+                    <button
+                        class="settings-rail-item"
+                        data-section="translation"
+                    >
+                        <span class="rail-icon">
+                            <svg
+                                width="14"
+                                height="14"
+                                viewBox="0 0 16 16"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="1.5"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <path
+                                    d="M2 4.2h6M5 2.6V4.2M3.2 4.2c.4 2.4 1.8 4.4 3.4 5.6M7.4 4.2c-.4 2-1.6 4-3 5.4"
+                                />
+                                <path d="M8.2 13.4l2.4-6 2.4 6M9.4 11.4h2.4" />
+                            </svg>
+                        </span>
+                        翻译服务
+                    </button>
+                    <button class="settings-rail-item" data-section="general">
+                        <span class="rail-icon">
+                            <svg
+                                width="14"
+                                height="14"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="1.7"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <path
+                                    d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"
+                                />
+                            </svg>
+                        </span>
+                        通用设置
+                    </button>
+                    <button class="settings-rail-item" data-section="stats">
+                        <span class="rail-icon">
+                            <svg
+                                width="14"
+                                height="14"
+                                viewBox="0 0 16 16"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="1.5"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <rect
+                                    x="2.6"
+                                    y="2.6"
+                                    width="10.8"
+                                    height="10.8"
+                                    rx="1.8"
+                                />
+                                <path d="M5 11V8.5M7.5 11V6M10 11V9" />
+                            </svg>
+                        </span>
+                        阅读统计
+                    </button>
+                    <button class="settings-rail-item" data-section="other">
+                        <span class="rail-icon">
+                            <svg
+                                width="14"
+                                height="14"
+                                viewBox="0 0 16 16"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="1.5"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <path
+                                    d="M8 2v3M8 11v3M2 8h3M11 8h3M4.2 4.2l2 2M9.8 9.8l2 2M11.8 4.2l-2 2M6.2 9.8l-2 2"
+                                />
+                            </svg>
+                        </span>
+                        其他
+                    </button>
+                </nav>
+
+                <div class="settings-pane">
+                    <!-- Feeds section -->
+                    <div class="settings-section hidden" id="section-feeds">
+                        <div class="section-hero">
+                            <div class="section-eyebrow">
+                                <svg
+                                    width="10"
+                                    height="10"
+                                    viewBox="0 0 16 16"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="1.5"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <path
+                                        d="M8 2v3M8 11v3M2 8h3M11 8h3M4.2 4.2l2 2M9.8 9.8l2 2M11.8 4.2l-2 2M6.2 9.8l-2 2"
+                                    />
+                                </svg>
+                                订阅源
+                            </div>
+                            <h1 class="section-title">管理 RSS 订阅</h1>
+                            <p class="section-subtitle">
+                                批量编辑订阅源、设置图标、调整刷新行为。
+                            </p>
+                        </div>
+
+                        <div class="settings-card">
+                            <div
+                                class="settings-card-header"
+                                id="feeds-card-header"
+                            >
+                                已订阅 · 0
+                            </div>
+                            <div
+                                class="settings-card-body"
+                                id="feeds-list-body"
+                            >
+                                <!-- per-feed rows injected by JS -->
+                            </div>
+                        </div>
+
+                        <!-- AI Briefing settings card -->
+                        <div class="settings-card">
+                            <div class="briefing-card-header">
+                                <div class="briefing-card-left">
+                                    <span class="briefing-card-icon">
+                                        <svg
+                                            width="15"
+                                            height="15"
+                                            viewBox="0 0 16 16"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="1.5"
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                        >
+                                            <path
+                                                d="M2.8 3.5h7.4a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H3.8a1 1 0 0 1-1-1Z"
+                                            />
+                                            <path
+                                                d="M11.2 5.5h1.5a.5.5 0 0 1 .5.5v6.5a1 1 0 0 1-2 0"
+                                            />
+                                            <line
+                                                x1="4.6"
+                                                y1="6.2"
+                                                x2="9.4"
+                                                y2="6.2"
+                                            />
+                                            <line
+                                                x1="4.6"
+                                                y1="8.4"
+                                                x2="9.4"
+                                                y2="8.4"
+                                            />
+                                            <line
+                                                x1="4.6"
+                                                y1="10.6"
+                                                x2="7.5"
+                                                y2="10.6"
+                                            />
+                                        </svg>
+                                    </span>
+                                    <div>
+                                        <div class="briefing-card-title-row">
+                                            AI 简报
+                                            <span class="briefing-card-tag"
+                                                >Beta</span
+                                            >
+                                        </div>
+                                        <div class="briefing-card-subtitle">
+                                            定期把订阅源新增的文献整理成中文简报，bullet
+                                            后附原文跳转链接
+                                        </div>
+                                    </div>
+                                </div>
+                                <button
+                                    id="briefing-enabled-toggle"
+                                    class="toggle-switch on"
+                                    aria-label="切换 AI 简报"
+                                ></button>
+                            </div>
+                            <div
+                                class="briefing-card-body"
+                                id="briefing-card-body"
+                            >
+                                <div class="settings-row settings-row-inline">
+                                    <div class="srow-label-group">
+                                        <div class="srow-label">生成频率</div>
+                                    </div>
+                                    <div
+                                        class="segmented-control"
+                                        id="briefing-frequency-control"
+                                    >
+                                        <button
+                                            class="seg-btn"
+                                            data-value="daily"
+                                        >
+                                            每日
+                                        </button>
+                                        <button
+                                            class="seg-btn active"
+                                            data-value="weekly"
+                                        >
+                                            每周
+                                        </button>
+                                        <button
+                                            class="seg-btn"
+                                            data-value="biweekly"
+                                        >
+                                            每两周
+                                        </button>
+                                        <button
+                                            class="seg-btn"
+                                            data-value="monthly"
+                                        >
+                                            每月
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div
+                                    class="settings-row settings-row-inline"
+                                    id="briefing-day-row"
+                                >
+                                    <div class="srow-label-group">
+                                        <div class="srow-label">每周哪天</div>
+                                    </div>
+                                    <select
+                                        id="briefing-day"
+                                        class="settings-select"
+                                        style="width: 140px"
+                                    >
+                                        <option value="mon">星期一</option>
+                                        <option value="tue">星期二</option>
+                                        <option value="wed">星期三</option>
+                                        <option value="thu">星期四</option>
+                                        <option value="fri">星期五</option>
+                                        <option value="sat">星期六</option>
+                                        <option value="sun">星期日</option>
+                                    </select>
+                                </div>
+
+                                <div class="settings-row settings-row-inline">
+                                    <div class="srow-label-group">
+                                        <div class="srow-label">生成时间</div>
+                                    </div>
+                                    <input
+                                        type="time"
+                                        id="briefing-hour"
+                                        class="settings-input"
+                                        value="09:00"
+                                        style="
+                                            width: 110px;
+                                            font-family: var(--font-mono);
+                                            font-feature-settings: &quot;tnum&quot;;
+                                        "
+                                    />
+                                </div>
+
+                                <div class="settings-row">
+                                    <label class="srow-label">模型</label>
+                                    <div class="settings-input readonly">
+                                        <span
+                                            style="
+                                                width: 6px;
+                                                height: 6px;
+                                                border-radius: 99px;
+                                                background: var(--accent);
+                                            "
+                                        ></span>
+                                        <span>deepseek-v4-pro</span>
+                                        <span
+                                            style="
+                                                margin-left: auto;
+                                                font-size: 10.5px;
+                                                color: var(--text-tertiary);
+                                                letter-spacing: 0.3px;
+                                                font-family: var(--font-sans);
+                                            "
+                                            >固定</span
+                                        >
+                                    </div>
+                                </div>
+
+                                <div class="settings-row">
+                                    <label class="srow-label"
+                                        >简报 Prompt</label
+                                    >
+                                    <textarea
+                                        id="briefing-prompt"
+                                        class="settings-input settings-textarea"
+                                        rows="4"
+                                        style="min-height: 90px"
+                                    ></textarea>
+                                    <div
+                                        style="
+                                            display: flex;
+                                            gap: 8px;
+                                            margin-top: 6px;
+                                        "
+                                    >
+                                        <button
+                                            class="btn-ghost"
+                                            id="btn-briefing-expand"
+                                        >
+                                            展开
+                                        </button>
+                                        <button
+                                            class="btn-ghost"
+                                            id="btn-briefing-reset"
+                                        >
+                                            恢复默认
+                                        </button>
+                                        <span style="flex: 1"></span>
+                                        <span
+                                            id="briefing-prompt-len"
+                                            style="
+                                                font-size: 10.5px;
+                                                color: var(--text-tertiary);
+                                                align-self: center;
+                                                font-feature-settings: &quot;tnum&quot;;
+                                            "
+                                            >0 字符</span
+                                        >
+                                    </div>
+                                    <div
+                                        class="srow-hint"
+                                        id="briefing-prompt-hint"
+                                    >
+                                        当前使用推荐默认 Prompt
+                                    </div>
+                                </div>
+
+                                <div class="briefing-next-info">
+                                    <span class="icon">
+                                        <svg
+                                            width="13"
+                                            height="13"
+                                            viewBox="0 0 16 16"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="1.5"
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                        >
+                                            <circle cx="8" cy="8" r="5.5" />
+                                            <path d="M8 5v3l2 1.4" />
+                                        </svg>
+                                    </span>
+                                    <div>
+                                        下次自动生成：<span
+                                            class="strong"
+                                            id="briefing-next-date"
+                                            >—</span
+                                        >
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PubMed RSS generator -->
+                        <div class="settings-card">
+                            <div class="pubmed-card-header">
+                                <span class="pubmed-badge">PM</span>
+                                <div class="pubmed-title-row">
+                                    <div class="pubmed-title">
+                                        PubMed RSS 生成器
+                                        <span class="pubmed-tag">NCBI</span>
+                                    </div>
+                                    <div class="pubmed-subtitle">
+                                        用 PubMed 检索式生成 RSS
+                                        订阅链接，一键加入订阅列表
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="settings-card-body">
+                                <div class="settings-row">
+                                    <label class="srow-label">检索式</label>
+                                    <textarea
+                                        id="pubmed-query"
+                                        class="settings-input settings-textarea"
+                                        rows="3"
+                                        placeholder='例：sepsis AND ("machine learning" OR "deep learning")'
+                                        style="
+                                            min-height: 72px;
+                                            font-family: var(--font-mono);
+                                            font-size: 12.5px;
+                                            line-height: 1.6;
+                                        "
+                                    ></textarea>
+                                    <div
+                                        style="
+                                            display: flex;
+                                            justify-content: space-between;
+                                            align-items: center;
+                                            margin-top: 6px;
+                                        "
+                                    >
+                                        <a
+                                            id="pubmed-preview-link"
+                                            class="pubmed-preview-link"
+                                            target="_blank"
+                                            rel="noreferrer"
+                                        >
+                                            在 PubMed 预览
+                                            <svg
+                                                width="9"
+                                                height="9"
+                                                viewBox="0 0 16 16"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="1.5"
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                            >
+                                                <path d="M9 3.2h3.8V7" />
+                                                <line
+                                                    x1="12.8"
+                                                    y1="3.2"
+                                                    x2="7"
+                                                    y2="9"
+                                                />
+                                                <path
+                                                    d="M12 9v3.6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5.4a1 1 0 0 1 1-1h3.6"
+                                                />
+                                            </svg>
+                                        </a>
+                                        <button
+                                            class="btn-ghost btn-sm"
+                                            id="btn-pubmed-nl"
+                                            type="button"
+                                        >
+                                            <svg
+                                                width="12"
+                                                height="12"
+                                                viewBox="0 0 16 16"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="1.5"
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                            >
+                                                <path
+                                                    d="m8 2 .8 1.6L10.4 4.4 8.8 5.2 8 7l-.8-1.8L5.6 4.4l1.6-.8z"
+                                                />
+                                                <path
+                                                    d="M8 2v3M8 11v3M2 8h3M11 8h3M4.2 4.2l2 2M9.8 9.8l2 2M11.8 4.2l-2 2M6.2 9.8l-2 2"
+                                                />
+                                            </svg>
+                                            AI 生成检索式
+                                        </button>
+                                    </div>
+                                    <div class="srow-hint">
+                                        支持 PubMed 高级检索语法（AND / OR / NOT
+                                        / 字段标签），也可以输入自然语言由 AI
+                                        自动转换，但请尽可能简洁
+                                    </div>
+                                </div>
+
+                                <div class="settings-row settings-row-inline">
+                                    <div class="srow-label-group">
+                                        <div class="srow-label">抓取数量</div>
+                                        <div class="srow-hint">
+                                            每次刷新最多拉取多少篇文章
+                                        </div>
+                                    </div>
+                                    <select
+                                        id="pubmed-limit"
+                                        class="settings-select"
+                                        style="width: 110px"
+                                    >
+                                        <option value="5">5 篇</option>
+                                        <option value="10">10 篇</option>
+                                        <option value="15" selected>
+                                            15 篇
+                                        </option>
+                                        <option value="20">20 篇</option>
+                                        <option value="50">50 篇</option>
+                                    </select>
+                                </div>
+
+                                <div class="settings-row">
+                                    <label class="srow-label">订阅源名称</label>
+                                    <input
+                                        type="text"
+                                        id="pubmed-feedname"
+                                        class="settings-input"
+                                        placeholder="留空将使用第一组关键词作为名称"
+                                    />
+                                </div>
+
+                                <div
+                                    id="pubmed-actions-idle"
+                                    style="
+                                        display: flex;
+                                        justify-content: flex-end;
+                                    "
+                                >
+                                    <button
+                                        class="btn btn-primary"
+                                        id="btn-pubmed-generate"
+                                    >
+                                        <svg
+                                            width="13"
+                                            height="13"
+                                            viewBox="0 0 16 16"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="1.5"
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                        >
+                                            <path
+                                                d="M8 2v3M8 11v3M2 8h3M11 8h3M4.2 4.2l2 2M9.8 9.8l2 2M11.8 4.2l-2 2M6.2 9.8l-2 2"
+                                            />
+                                        </svg>
+                                        生成 RSS 链接
+                                    </button>
+                                </div>
+
+                                <div
+                                    id="pubmed-result"
+                                    class="pubmed-result hidden"
+                                >
+                                    <div class="pubmed-result-eyebrow">
+                                        <span class="dot"></span>
+                                        <span id="pubmed-result-eyebrow-text"
+                                            >RSS 链接已生成</span
+                                        >
+                                    </div>
+                                    <div
+                                        class="pubmed-result-url"
+                                        id="pubmed-result-url"
+                                    ></div>
+                                    <div
+                                        class="pubmed-result-actions"
+                                        id="pubmed-result-actions"
+                                    >
+                                        <button
+                                            class="btn btn-secondary btn-sm"
+                                            id="btn-pubmed-copy"
+                                        >
+                                            复制链接
+                                        </button>
+                                        <button
+                                            class="btn btn-primary btn-sm"
+                                            id="btn-pubmed-add"
+                                        >
+                                            <svg
+                                                width="12"
+                                                height="12"
+                                                viewBox="0 0 16 16"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="1.5"
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                            >
+                                                <line
+                                                    x1="8"
+                                                    y1="3.5"
+                                                    x2="8"
+                                                    y2="12.5"
+                                                />
+                                                <line
+                                                    x1="3.5"
+                                                    y1="8"
+                                                    x2="12.5"
+                                                    y2="8"
+                                                />
+                                            </svg>
+                                            添加到订阅源
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Translation section -->
+                    <div
+                        class="settings-section hidden"
+                        id="section-translation"
+                    >
+                        <!-- First-launch onboarding banner. Shown when no API
+                             Key is configured yet; hidden automatically once
+                             the user saves a valid key. See updateView() /
+                             saveTranslationSettings() in main.js. -->
+                        <div
+                            id="onboarding-banner"
+                            class="onboarding-banner hidden"
+                        >
+                            <div class="onboarding-icon">✨</div>
+                            <div class="onboarding-body">
+                                <div class="onboarding-title">
+                                    开启自动翻译（可选）
+                                </div>
+                                <div class="onboarding-text">
+                                    Cento 不配置也能直接阅读英文
+                                    RSS。如果想让标题和摘要自动翻译成中文，在下方填入
+                                    DeepSeek API Key 并保存即可。
+                                </div>
+                                <div class="onboarding-hint">
+                                    没有 API Key？前往
+                                    <a
+                                        href="https://platform.deepseek.com/api_keys"
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        class="onboarding-link"
+                                        >DeepSeek 控制台</a
+                                    >
+                                    免费注册并生成（充值少量即可使用，翻译每篇文章约 0.001 元）
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section-hero">
+                            <div class="section-eyebrow">
+                                <svg
+                                    width="10"
+                                    height="10"
+                                    viewBox="0 0 16 16"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="1.5"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <path
+                                        d="M8 2v3M8 11v3M2 8h3M11 8h3M4.2 4.2l2 2M9.8 9.8l2 2M11.8 4.2l-2 2M6.2 9.8l-2 2"
+                                    />
+                                </svg>
+                                翻译服务
+                            </div>
+                            <h1 class="section-title">DeepSeek 配置</h1>
+                            <p class="section-subtitle">
+                                配置翻译服务后即可使用 Cento 自动翻译 PubMed
+                                文献的标题和摘要。API Key
+                                仅存储在本地数据库中，不会上传到云端。
+                            </p>
+                        </div>
+
+                        <div class="settings-card">
+                            <div class="settings-card-header">API 凭据</div>
+                            <div class="settings-card-body">
+                                <div class="settings-row">
+                                    <label class="srow-label" for="api-key"
+                                        >API Key</label
+                                    >
+                                    <div class="password-field">
+                                        <input
+                                            type="password"
+                                            id="api-key"
+                                            placeholder="sk-..."
+                                            autocomplete="off"
+                                            class="settings-input"
+                                        />
+                                        <button
+                                            type="button"
+                                            id="btn-toggle-api-key"
+                                            class="btn-eye"
+                                            title="显示 API Key"
+                                        >
+                                            <svg
+                                                width="13"
+                                                height="13"
+                                                viewBox="0 0 16 16"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="1.5"
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                            >
+                                                <path
+                                                    d="M1.6 8c1.4-2.8 3.7-4.4 6.4-4.4S13 5.2 14.4 8c-1.4 2.8-3.7 4.4-6.4 4.4S3 10.8 1.6 8z"
+                                                />
+                                                <circle cx="8" cy="8" r="1.8" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <div class="srow-hint">
+                                        前往
+                                        <a
+                                            href="https://platform.deepseek.com/api_keys"
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            style="
+                                                color: var(--accent-deep);
+                                                text-decoration: none;
+                                                font-weight: 500;
+                                                border-bottom: 0.5px solid
+                                                    var(--accent-tint);
+                                            "
+                                            >DeepSeek 控制台</a
+                                        >
+                                        获取，以 sk- 开头
+                                    </div>
+                                </div>
+                                <div class="settings-row">
+                                    <label class="srow-label" for="base-url"
+                                        >Base URL</label
+                                    >
+                                    <input
+                                        type="text"
+                                        id="base-url"
+                                        placeholder="https://api.deepseek.com"
+                                        class="settings-input"
+                                    />
+                                </div>
+                                <div class="settings-row">
+                                    <label class="srow-label" for="model"
+                                        >Model</label
+                                    >
+                                    <input
+                                        type="text"
+                                        id="model"
+                                        placeholder="deepseek-v4-flash"
+                                        class="settings-input"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="settings-card">
+                            <div class="settings-card-header">
+                                DeepSeek 余额
+                                <div class="settings-card-subtitle">
+                                    直接读取 DeepSeek 官方账户余额（GET /user/balance）。
+                                </div>
+                            </div>
+                            <div class="settings-card-body">
+                                <div id="balance-display" class="balance-display balance-empty">
+                                    <div class="balance-empty-text">尚未查询，点击下方「刷新余额」获取最新数据</div>
+                                </div>
+                                <div class="settings-action-bar settings-action-bar-inline">
+                                    <p id="balance-status" class="settings-status"></p>
+                                    <button
+                                        type="button"
+                                        id="btn-refresh-balance"
+                                        class="btn btn-secondary"
+                                    >
+                                        刷新余额
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="settings-card">
+                            <div class="settings-card-header">
+                                翻译指令
+                                <div class="settings-card-subtitle">
+                                    自定义 System Prompt，留空则使用内置默认值
+                                </div>
+                            </div>
+                            <div class="settings-card-body">
+                                <div class="settings-row">
+                                    <textarea
+                                        id="system-prompt"
+                                        rows="6"
+                                        placeholder="你是一位精通医学的专业翻译。请将以下英文医学文献的标题和摘要翻译为简体中文…"
+                                        class="settings-input settings-textarea"
+                                    ></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="settings-action-bar">
+                            <p id="settings-status" class="settings-status"></p>
+                            <div class="settings-action-btns">
+                                <button
+                                    type="button"
+                                    id="btn-test"
+                                    class="btn btn-secondary"
+                                >
+                                    测试连接
+                                </button>
+                                <button
+                                    type="button"
+                                    id="btn-save-settings"
+                                    class="btn btn-primary"
+                                >
+                                    保存设置
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- General section -->
+                    <div class="settings-section hidden" id="section-general">
+                        <div class="section-hero">
+                            <div class="section-eyebrow">
+                                <svg
+                                    width="10"
+                                    height="10"
+                                    viewBox="0 0 16 16"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="1.5"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <path
+                                        d="M8 2v3M8 11v3M2 8h3M11 8h3M4.2 4.2l2 2M9.8 9.8l2 2M11.8 4.2l-2 2M6.2 9.8l-2 2"
+                                    />
+                                </svg>
+                                通用
+                            </div>
+                            <h1 class="section-title">外观与行为</h1>
+                            <p class="section-subtitle">
+                                调整主题、强调色与阅读字号，让 Cento
+                                与你的桌面契合。
+                            </p>
+                        </div>
+
+                        <div class="settings-card">
+                            <div class="settings-card-header">刷新与保留</div>
+                            <div class="settings-card-body">
+                                <div class="settings-row settings-row-inline">
+                                    <div class="srow-label-group">
+                                        <div class="srow-label">
+                                            已读文章保留
+                                        </div>
+                                    </div>
+                                    <select
+                                        id="read-retention"
+                                        class="settings-select"
+                                        style="width: 200px"
+                                    >
+                                        <option value="0">永久保留</option>
+                                        <option value="1">
+                                            1 天后不再显示
+                                        </option>
+                                        <option value="3">
+                                            3 天后不再显示
+                                        </option>
+                                        <option value="7">
+                                            7 天后不再显示
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="settings-row settings-row-inline">
+                                    <div class="srow-label-group">
+                                        <div class="srow-label">
+                                            启动时自动刷新
+                                        </div>
+                                        <div class="srow-hint">
+                                            App 启动后立即拉取最新文章
+                                        </div>
+                                    </div>
+                                    <button
+                                        class="toggle-switch on"
+                                        data-pref="autorefresh-startup"
+                                        aria-label="启动时自动刷新"
+                                    ></button>
+                                </div>
+                                <div class="settings-row settings-row-inline">
+                                    <div class="srow-label-group">
+                                        <div class="srow-label">
+                                            后台自动刷新
+                                        </div>
+                                        <div class="srow-hint">
+                                            App 在后台运行时按订阅源频率自动拉取
+                                        </div>
+                                    </div>
+                                    <button
+                                        class="toggle-switch on"
+                                        data-pref="autorefresh-bg"
+                                        aria-label="后台自动刷新"
+                                    ></button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="settings-card">
+                            <div class="settings-card-header">系统集成</div>
+                            <div class="settings-card-body">
+                                <div class="settings-row settings-row-inline">
+                                    <div class="srow-label-group">
+                                        <div class="srow-label">显示工具栏图标</div>
+                                        <div class="srow-hint">
+                                            在 macOS 顶部状态栏显示 Cento 图标，未读数会以小角标形式展示，点击可唤起主窗口
+                                        </div>
+                                    </div>
+                                    <button
+                                        class="toggle-switch on"
+                                        data-pref="tray-visible"
+                                        aria-label="显示工具栏图标"
+                                    ></button>
+                                </div>
+                                <div class="settings-row settings-row-inline">
+                                    <div class="srow-label-group">
+                                        <div class="srow-label">通知</div>
+                                        <div class="srow-hint">
+                                            订阅源更新会通过 macOS 系统通知提醒。点击下方按钮发送一条测试通知。
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        id="btn-test-notification"
+                                        class="btn btn-secondary"
+                                    >
+                                        测试通知
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="settings-card">
+                            <div class="settings-card-header">外观</div>
+                            <div class="settings-card-body">
+                                <div class="settings-row settings-row-inline">
+                                    <div class="srow-label-group">
+                                        <div class="srow-label">主题</div>
+                                    </div>
+                                    <div
+                                        class="segmented-control"
+                                        id="theme-control"
+                                    >
+                                        <button
+                                            class="seg-btn"
+                                            data-value="light"
+                                        >
+                                            浅色
+                                        </button>
+                                        <button
+                                            class="seg-btn"
+                                            data-value="dark"
+                                        >
+                                            深色
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="settings-row settings-row-inline">
+                                    <div class="srow-label-group">
+                                        <div class="srow-label">强调色</div>
+                                    </div>
+                                    <div
+                                        class="accent-swatches"
+                                        id="accent-swatches"
+                                    >
+                                        <button
+                                            class="swatch"
+                                            data-accent="coral"
+                                            style="
+                                                background: #c76547;
+                                                color: #c76547;
+                                            "
+                                            title="赤陶"
+                                        ></button>
+                                        <button
+                                            class="swatch"
+                                            data-accent="blue"
+                                            style="
+                                                background: #2f6dc7;
+                                                color: #2f6dc7;
+                                            "
+                                            title="海蓝"
+                                        ></button>
+                                        <button
+                                            class="swatch"
+                                            data-accent="forest"
+                                            style="
+                                                background: #3e7a4d;
+                                                color: #3e7a4d;
+                                            "
+                                            title="森绿"
+                                        ></button>
+                                        <button
+                                            class="swatch"
+                                            data-accent="ink"
+                                            style="
+                                                background: #3b342a;
+                                                color: #3b342a;
+                                            "
+                                            title="墨夜"
+                                        ></button>
+                                    </div>
+                                </div>
+                                <div class="settings-row settings-row-inline">
+                                    <div class="srow-label-group">
+                                        <div class="srow-label">字体大小</div>
+                                        <div class="srow-hint">
+                                            文章标题与摘要的阅读字号
+                                        </div>
+                                    </div>
+                                    <div
+                                        class="segmented-control"
+                                        id="fontscale-control"
+                                    >
+                                        <button class="seg-btn" data-value="sm">
+                                            小
+                                        </button>
+                                        <button class="seg-btn" data-value="md">
+                                            中
+                                        </button>
+                                        <button class="seg-btn" data-value="lg">
+                                            大
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="settings-action-bar">
+                            <p id="general-status" class="settings-status"></p>
+                            <div class="settings-action-btns">
+                                <button
+                                    type="button"
+                                    id="btn-save-general"
+                                    class="btn btn-primary"
+                                >
+                                    保存
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stats section -->
+                    <div class="settings-section hidden" id="section-stats">
+                        <div class="section-hero">
+                            <div class="section-eyebrow">
+                                <svg
+                                    width="10"
+                                    height="10"
+                                    viewBox="0 0 16 16"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="1.5"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <rect
+                                        x="2.6"
+                                        y="2.6"
+                                        width="10.8"
+                                        height="10.8"
+                                        rx="1.8"
+                                    />
+                                    <path d="M5 11V8.5M7.5 11V6M10 11V9" />
+                                </svg>
+                                阅读统计
+                            </div>
+                            <h1 class="section-title">你的阅读节律</h1>
+                            <p class="section-subtitle">
+                                基于本地缓存的阅读记录，统计基于已读时间戳。
+                            </p>
+                        </div>
+
+                        <div class="settings-card">
+                            <div class="settings-card-header">概览</div>
+                            <div class="settings-card-body">
+                                <div class="stat-grid">
+                                    <div class="stat-card stat-card-accent">
+                                        <div class="stat-label">总抓取</div>
+                                        <div class="stat-value">
+                                            <span id="stat-total-crawled">0</span
+                                            ><span class="stat-unit">篇</span>
+                                        </div>
+                                    </div>
+                                    <div class="stat-card stat-card-accent">
+                                        <div class="stat-label">已读总数</div>
+                                        <div class="stat-value">
+                                            <span id="stat-total-read">0</span
+                                            ><span class="stat-unit">篇</span>
+                                        </div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="stat-label">当前连续</div>
+                                        <div class="stat-value">
+                                            <span id="stat-current-streak"
+                                                >0</span
+                                            ><span class="stat-unit">天</span>
+                                        </div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="stat-label">最长连续</div>
+                                        <div class="stat-value">
+                                            <span id="stat-longest-streak"
+                                                >0</span
+                                            ><span class="stat-unit">天</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="settings-card">
+                            <div class="settings-card-header heatmap-card-header">
+                                <span>阅读热力图</span>
+                                <select
+                                    id="heatmap-year"
+                                    class="settings-select heatmap-year-select"
+                                ></select>
+                            </div>
+                            <div class="settings-card-body">
+                                <div id="heatmap" class="heatmap"></div>
+                            </div>
+                        </div>
+
+                        <div class="settings-card">
+                            <div class="settings-card-header">阅读偏好</div>
+                            <div class="settings-card-body">
+                                <div
+                                    id="feed-pref-bars"
+                                    class="feed-pref-bars"
+                                ></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Other section -->
+                    <div class="settings-section hidden" id="section-other">
+                        <div class="section-hero">
+                            <div class="section-eyebrow">
+                                <svg
+                                    width="10"
+                                    height="10"
+                                    viewBox="0 0 16 16"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="1.5"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <path
+                                        d="M8 2v3M8 11v3M2 8h3M11 8h3M4.2 4.2l2 2M9.8 9.8l2 2M11.8 4.2l-2 2M6.2 9.8l-2 2"
+                                    />
+                                </svg>
+                                关于
+                            </div>
+                            <h1 class="section-title">高级与数据</h1>
+                            <p class="section-subtitle">
+                                管理本地数据、导入导出订阅、查看版本信息。
+                            </p>
+                        </div>
+
+                        <div class="settings-card">
+                            <div class="settings-card-header">数据</div>
+                            <div class="settings-card-body">
+                                <div class="settings-row settings-row-inline">
+                                    <div class="srow-label-group">
+                                        <div class="srow-label">
+                                            本地数据库位置
+                                        </div>
+                                    </div>
+                                    <span
+                                        style="
+                                            font-family: var(--font-mono);
+                                            font-size: 11.5px;
+                                            color: var(--text-secondary);
+                                            background: rgba(0, 0, 0, 0.04);
+                                            padding: 3px 8px;
+                                            border-radius: 5px;
+                                        "
+                                        >~/Library/Application
+                                        Support/Cento</span
+                                    >
+                                </div>
+                                <div
+                                    style="
+                                        display: flex;
+                                        gap: 8px;
+                                        padding-top: 4px;
+                                    "
+                                >
+                                    <button class="btn btn-secondary btn-sm">
+                                        导出 OPML
+                                    </button>
+                                    <button class="btn btn-secondary btn-sm">
+                                        导入 OPML
+                                    </button>
+                                    <button class="btn btn-secondary btn-sm">
+                                        清除翻译缓存
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="settings-card">
+                            <div class="settings-card-header">关于 Cento</div>
+                            <div class="settings-card-body">
+                                <div class="about-grid">
+                                    <div class="about-label">当前版本</div>
+                                    <div
+                                        class="about-value mono"
+                                        id="about-version"
+                                    >
+                                        …
+                                    </div>
+                                    <div class="about-label">引擎</div>
+                                    <div class="about-value mono">
+                                        Tauri 2 · WKWebView
+                                    </div>
+                                    <div class="about-label">作者</div>
+                                    <div class="about-value">
+                                        <a
+                                            href="https://github.com/itsdrchen/Cento"
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            class="about-link"
+                                            >itsdrchen / Cento</
+                                        >
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="settings-card">
+                            <div class="settings-card-header">
+                                更新通道
+                            </div>
+                            <div class="settings-card-body">
+                                <div class="update-row">
+                                    <div class="update-info">
+                                        <div
+                                            class="update-status"
+                                            id="update-status"
+                                        >
+                                            点击检查可用版本
+                                        </div>
+                                        <div
+                                            class="update-meta"
+                                            id="update-meta"
+                                        >
+                                            上次检查：从未
+                                        </div>
+                                    </div>
+                                    <button
+                                        class="btn btn-secondary"
+                                        id="btn-check-update"
+                                    >
+                                        检查更新
+                                    </button>
+                                </div>
+                                <div
+                                    class="update-actions hidden"
+                                    id="update-actions"
+                                >
+                                    <a
+                                        href="#"
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        class="btn btn-primary"
+                                        id="btn-download-update"
+                                    >
+                                        下载安装包
+                                    </a>
+                                    <a
+                                        href="#"
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        class="btn-link"
+                                        id="btn-view-release"
+                                    >
+                                        查看发布说明 →
+                                    </a>
+                                </div>
+                                <div class="settings-row settings-row-inline">
+                                    <div class="srow-label-group">
+                                        <div class="srow-label">
+                                            自动检查更新
+                                        </div>
+                                        <div class="srow-hint">
+                                            每周自动访问
+                                            GitHub，发现新版时通过桌面通知告知
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        id="update-auto-check"
+                                        class="toggle-switch on"
+                                        aria-label="切换自动检查更新"
+                                    ></button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="settings-card">
+                            <div class="settings-card-header">危险区域</div>
+                            <div class="settings-card-body">
+                                <div
+                                    style="
+                                        font-size: 12.5px;
+                                        color: var(--text-secondary);
+                                        line-height: 1.6;
+                                    "
+                                >
+                                    重置会清除全部订阅源、文章缓存与翻译记录。此操作不可撤销。
+                                </div>
+                                <button
+                                    class="btn-danger"
+                                    style="align-self: flex-start"
+                                >
+                                    重置所有数据…
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Main view ────────────────────────── -->
+            <div id="main-view" class="main-view hidden">
+                <!-- Pipeline-level translation status banner. Hidden by default;
+                     pinned at the top of the main view by JS when the
+                     translation pipeline reports a missing or invalid API key.
+                     Wired in setupTranslationEvents() in main.js. -->
+                <div
+                    id="translation-status-banner"
+                    class="translation-status-banner hidden"
+                    role="status"
+                >
+                    <svg
+                        class="tsb-icon"
+                        width="14"
+                        height="14"
+                        viewBox="0 0 16 16"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                    >
+                        <circle cx="8" cy="8" r="6.5" />
+                        <path d="M8 5v3.5M8 11h.01" />
+                    </svg>
+                    <span class="tsb-text"></span>
+                    <button
+                        type="button"
+                        class="tsb-action"
+                        id="tsb-go-settings"
+                    >
+                        前往设置
+                    </button>
+                    <button
+                        type="button"
+                        class="tsb-dismiss"
+                        id="tsb-dismiss"
+                        title="关闭"
+                        aria-label="关闭"
+                    >
+                        ×
+                    </button>
+                </div>
+                <!-- Floating frosted-glass sidebar (styled by `.sidebar` in
+                     styles.css — position:fixed with 8 px gutters on the
+                     window edges). Traffic lights are positioned to overlay
+                     this panel's top via `trafficLightPosition` in
+                     tauri.conf.json; the `Cento` brand label sits in the
+                     same upper strip below them. -->
+                <aside id="sidebar" class="sidebar" data-tauri-drag-region>
+                    <div class="sidebar-brand" aria-hidden="true">Cento</div>
+                    <div class="add-feed-wrap">
+                        <div class="add-feed-row" id="add-feed-row">
+                            <span class="add-feed-icon" id="add-feed-icon">
+                                <svg
+                                    width="13"
+                                    height="13"
+                                    viewBox="0 0 16 16"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="1.5"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    aria-hidden="true"
+                                >
+                                    <line x1="8" y1="3.5" x2="8" y2="12.5" />
+                                    <line x1="3.5" y1="8" x2="12.5" y2="8" />
+                                </svg>
+                            </span>
+                            <input
+                                type="text"
+                                id="feed-url"
+                                placeholder="添加订阅源 · 粘贴 RSS URL"
+                                autocomplete="off"
+                            />
+                            <button
+                                id="btn-add-feed"
+                                class="btn-add-submit hidden"
+                            >
+                                添加
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Overview rows -->
+                    <div class="sidebar-overview">
+                        <div class="sidebar-row" data-view="all">
+                            <span class="sidebar-row-icon">
+                                <svg
+                                    width="15"
+                                    height="15"
+                                    viewBox="0 0 16 16"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="1.5"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <path
+                                        d="M2.5 9.2 3.6 4a1 1 0 0 1 1-.8h6.8a1 1 0 0 1 1 .8l1.1 5.2v3a1 1 0 0 1-1 1H3.5a1 1 0 0 1-1-1Z"
+                                    />
+                                    <path d="M2.5 9.2h3l.7 1.2h3.6l.7-1.2h3" />
+                                </svg>
+                            </span>
+                            <span class="sidebar-row-label">全部文章</span>
+                            <span
+                                class="sidebar-row-count"
+                                id="count-all"
+                            ></span>
+                        </div>
+                        <div
+                            class="sidebar-row sidebar-row-accent"
+                            data-view="unread"
+                        >
+                            <span class="sidebar-row-icon">
+                                <svg
+                                    width="15"
+                                    height="15"
+                                    viewBox="0 0 16 16"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="1.5"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <path
+                                        d="M8 2v3M8 11v3M2 8h3M11 8h3M4.2 4.2l2 2M9.8 9.8l2 2M11.8 4.2l-2 2M6.2 9.8l-2 2"
+                                    />
+                                </svg>
+                            </span>
+                            <span class="sidebar-row-label">未读</span>
+                            <span
+                                class="sidebar-row-count sidebar-row-count-accent"
+                                id="count-unread"
+                            ></span>
+                        </div>
+                        <div class="sidebar-row" data-view="starred">
+                            <span class="sidebar-row-icon">
+                                <svg
+                                    width="15"
+                                    height="15"
+                                    viewBox="0 0 16 16"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="1.5"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <path
+                                        d="m8 2.5 1.7 3.5 3.8.55-2.75 2.7.65 3.8L8 11.25 4.6 13.05l.65-3.8L2.5 6.55l3.8-.55Z"
+                                    />
+                                </svg>
+                            </span>
+                            <span class="sidebar-row-label">星标</span>
+                            <span
+                                class="sidebar-row-count"
+                                id="count-starred"
+                            ></span>
+                        </div>
+                        <div
+                            class="sidebar-row"
+                            data-view="briefing"
+                            id="sidebar-row-briefing"
+                        >
+                            <span class="sidebar-row-icon">
+                                <svg
+                                    width="15"
+                                    height="15"
+                                    viewBox="0 0 16 16"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="1.5"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <path
+                                        d="M2.8 3.5h7.4a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H3.8a1 1 0 0 1-1-1Z"
+                                    />
+                                    <path
+                                        d="M11.2 5.5h1.5a.5.5 0 0 1 .5.5v6.5a1 1 0 0 1-2 0"
+                                    />
+                                    <line x1="4.6" y1="6.2" x2="9.4" y2="6.2" />
+                                    <line x1="4.6" y1="8.4" x2="9.4" y2="8.4" />
+                                    <line
+                                        x1="4.6"
+                                        y1="10.6"
+                                        x2="7.5"
+                                        y2="10.6"
+                                    />
+                                </svg>
+                            </span>
+                            <span class="sidebar-row-label">简报</span>
+                            <span
+                                class="sidebar-row-count"
+                                id="count-briefing"
+                            ></span>
+                        </div>
+                    </div>
+
+                    <div class="feed-section-label">
+                        <span>订阅源</span>
+                    </div>
+                    <ul id="feed-list" class="feed-list"></ul>
+
+                    <!-- Cost meter -->
+                    <div class="cost-meter" id="cost-meter">
+                        <div class="cost-meter-top">
+                            <span>本月翻译</span>
+                            <span class="cost-meter-value" id="cost-value"
+                                >¥ 0.00</span
+                            >
+                        </div>
+                        <div class="cost-meter-bar">
+                            <div class="cost-meter-fill" id="cost-fill"></div>
+                        </div>
+                        <div class="cost-meter-bot">
+                            <span id="cost-chars">0 字符</span>
+                            <span class="cost-meter-model" id="cost-model"
+                                >deepseek-v4</span
+                            >
+                        </div>
+                    </div>
+
+                    <div id="global-status" class="global-status"></div>
+                </aside>
+
+                <!-- Content area -->
+                <div id="content-area" class="content-area">
+                    <!-- Entry list (feed mode) -->
+                    <section id="entry-list" class="entry-list">
+                        <div class="entry-list-header chrome">
+                            <div class="segmented-control" id="entry-filter">
+                                <button
+                                    class="seg-btn active"
+                                    data-filter="all"
+                                >
+                                    全部
+                                </button>
+                                <button class="seg-btn" data-filter="unread">
+                                    未读
+                                </button>
+                                <button class="seg-btn" data-filter="starred">
+                                    星标
+                                </button>
+                            </div>
+                        </div>
+                        <ul id="entry-items" class="entry-items">
+                            <li class="entry-empty">
+                                添加订阅源后点击刷新按钮获取文章
+                            </li>
+                        </ul>
+                    </section>
+
+                    <!-- Briefing list (briefing mode) -->
+                    <section id="briefing-list" class="briefing-list hidden">
+                        <div class="briefing-list-header chrome">
+                            <div class="briefing-list-title">
+                                <span class="brief-icon">
+                                    <svg
+                                        width="14"
+                                        height="14"
+                                        viewBox="0 0 16 16"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="1.5"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                    >
+                                        <path
+                                            d="M2.8 3.5h7.4a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H3.8a1 1 0 0 1-1-1Z"
+                                        />
+                                        <path
+                                            d="M11.2 5.5h1.5a.5.5 0 0 1 .5.5v6.5a1 1 0 0 1-2 0"
+                                        />
+                                        <line
+                                            x1="4.6"
+                                            y1="6.2"
+                                            x2="9.4"
+                                            y2="6.2"
+                                        />
+                                        <line
+                                            x1="4.6"
+                                            y1="8.4"
+                                            x2="9.4"
+                                            y2="8.4"
+                                        />
+                                        <line
+                                            x1="4.6"
+                                            y1="10.6"
+                                            x2="7.5"
+                                            y2="10.6"
+                                        />
+                                    </svg>
+                                </span>
+                                <span>简报</span>
+                            </div>
+                            <button
+                                class="briefing-gen-btn"
+                                id="btn-generate-briefing"
+                            >
+                                <svg
+                                    width="12"
+                                    height="12"
+                                    viewBox="0 0 16 16"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="1.5"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <path
+                                        d="M8 2v3M8 11v3M2 8h3M11 8h3M4.2 4.2l2 2M9.8 9.8l2 2M11.8 4.2l-2 2M6.2 9.8l-2 2"
+                                    />
+                                </svg>
+                                立即生成
+                            </button>
+                        </div>
+                        <ul id="briefing-items" class="briefing-items"></ul>
+                    </section>
+
+                    <!-- Detail panel (feed mode) -->
+                    <section id="detail-panel" class="detail-panel">
+                        <div id="detail-empty" class="detail-empty">
+                            <div class="detail-empty-icon">
+                                <svg
+                                    width="28"
+                                    height="28"
+                                    viewBox="0 0 16 16"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="1.5"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <path d="M4 2.8h8v10.4L8 10.4 4 13.2Z" />
+                                </svg>
+                            </div>
+                            <div class="detail-empty-title">
+                                选择一篇文章查看详情
+                            </div>
+                            <div class="detail-empty-hint">
+                                标题、摘要会被自动翻译为中文。点击右上角设置可配置翻译模型。
+                            </div>
+                        </div>
+
+                        <div id="detail-content" class="detail-content hidden">
+                            <!-- Sub-toolbar (seamless transparent) -->
+                            <div class="detail-subtoolbar chrome">
+                                <div class="detail-subtoolbar-left">
+                                    <span
+                                        id="detail-date-sub"
+                                        class="detail-date-sub"
+                                    ></span>
+                                </div>
+                                <div class="detail-subtoolbar-right">
+                                    <button
+                                        id="btn-star"
+                                        class="ghost-btn"
+                                        title="星标"
+                                    >
+                                        <svg
+                                            width="13"
+                                            height="13"
+                                            viewBox="0 0 16 16"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="1.5"
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                        >
+                                            <path
+                                                d="m8 2.5 1.7 3.5 3.8.55-2.75 2.7.65 3.8L8 11.25 4.6 13.05l.65-3.8L2.5 6.55l3.8-.55Z"
+                                            />
+                                        </svg>
+                                    </button>
+                                    <button
+                                        id="btn-open-url"
+                                        class="ghost-btn"
+                                        title="在浏览器中打开"
+                                    >
+                                        <svg
+                                            width="13"
+                                            height="13"
+                                            viewBox="0 0 16 16"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="1.5"
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            aria-hidden="true"
+                                        >
+                                            <path d="M9 3.2h3.8V7" />
+                                            <line
+                                                x1="12.8"
+                                                y1="3.2"
+                                                x2="7"
+                                                y2="9"
+                                            />
+                                            <path
+                                                d="M12 9v3.6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5.4a1 1 0 0 1 1-1h3.6"
+                                            />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Scroll body -->
+                            <div class="detail-body">
+                                <div class="detail-body-inner">
+                                    <div
+                                        id="detail-badge-row"
+                                        class="detail-badge-row hidden"
+                                    >
+                                        <span
+                                            id="detail-source-badge"
+                                            class="pill pill-accent"
+                                        ></span>
+                                        <span
+                                            id="detail-type-badge"
+                                            class="pill pill-neutral hidden"
+                                        ></span>
+                                    </div>
+
+                                    <h1
+                                        id="detail-title"
+                                        class="detail-title"
+                                    ></h1>
+                                    <p
+                                        id="detail-journal"
+                                        class="detail-journal hidden"
+                                    ></p>
+                                    <p
+                                        id="detail-affiliation"
+                                        class="detail-affiliation hidden"
+                                    ></p>
+
+                                    <div class="detail-meta-strip">
+                                        <span
+                                            id="detail-author"
+                                            class="detail-meta-author"
+                                        ></span>
+                                        <span
+                                            id="detail-author-sep"
+                                            class="detail-meta-dot hidden"
+                                            >·</span
+                                        >
+                                        <span
+                                            id="detail-publication-date"
+                                            class="detail-meta-date"
+                                        ></span>
+                                    </div>
+
+                                    <div
+                                        id="detail-summary-section"
+                                        class="detail-summary-section"
+                                    >
+                                        <div class="detail-summary-header">
+                                            <div class="detail-summary-label">
+                                                摘要
+                                            </div>
+                                            <div
+                                                id="detail-summary-retry"
+                                                class="detail-summary-retry hidden"
+                                            >
+                                                <button
+                                                    class="btn btn-secondary btn-sm"
+                                                    id="btn-retry-summary"
+                                                >
+                                                    <svg
+                                                        width="12"
+                                                        height="12"
+                                                        viewBox="0 0 16 16"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        stroke-width="1.5"
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                    >
+                                                        <path
+                                                            d="M13.2 8a5.2 5.2 0 1 1-1.6-3.7"
+                                                        />
+                                                        <path
+                                                            d="M13.5 2.6V5.2H10.9"
+                                                        />
+                                                    </svg>
+                                                    重新翻译
+                                                </button>
+                                            </div>
+                                            <div
+                                                class="detail-summary-toggle"
+                                                id="abstract-toggle"
+                                            >
+                                                <button
+                                                    class="abstract-toggle-btn active"
+                                                    data-lang="zh"
+                                                >
+                                                    中文
+                                                </button>
+                                                <button
+                                                    class="abstract-toggle-btn"
+                                                    data-lang="en"
+                                                >
+                                                    EN
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div
+                                            id="detail-summary-content"
+                                            class="detail-summary-content"
+                                        ></div>
+                                        <div
+                                            id="detail-ai-footer"
+                                            class="detail-ai-footer hidden"
+                                        >
+                                            <span class="ai-spark">
+                                                <svg
+                                                    width="13"
+                                                    height="13"
+                                                    viewBox="0 0 16 16"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    stroke-width="1.5"
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                >
+                                                    <path
+                                                        d="M8 2v3M8 11v3M2 8h3M11 8h3M4.2 4.2l2 2M9.8 9.8l2 2M11.8 4.2l-2 2M6.2 9.8l-2 2"
+                                                    />
+                                                </svg>
+                                            </span>
+                                            <div>
+                                                <span
+                                                    class="ai-footer-strong"
+                                                    id="ai-model-name"
+                                                    >由 deepseek-v4 翻译</span
+                                                ><span
+                                                    >，原文摘要来自
+                                                    PubMed。如有专业术语错误，可前往设置调整
+                                                    System Prompt。</span
+                                                >
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Briefing detail (briefing mode) -->
+                    <section
+                        id="briefing-detail"
+                        class="briefing-detail hidden"
+                    >
+                        <div id="briefing-detail-empty" class="detail-empty">
+                            <div class="detail-empty-icon">
+                                <svg
+                                    width="28"
+                                    height="28"
+                                    viewBox="0 0 16 16"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="1.5"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <path
+                                        d="M2.8 3.5h7.4a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H3.8a1 1 0 0 1-1-1Z"
+                                    />
+                                    <path
+                                        d="M11.2 5.5h1.5a.5.5 0 0 1 .5.5v6.5a1 1 0 0 1-2 0"
+                                    />
+                                </svg>
+                            </div>
+                            <div class="detail-empty-title">
+                                选择一份简报查看详情
+                            </div>
+                            <div class="detail-empty-hint">
+                                简报功能即将上线。可在「订阅源设置 → AI
+                                简报」配置生成频率。
+                            </div>
+                        </div>
+                        <div
+                            id="briefing-detail-content"
+                            class="hidden"
+                            style="
+                                display: flex;
+                                flex-direction: column;
+                                flex: 1;
+                                overflow: hidden;
+                            "
+                        >
+                            <div class="detail-subtoolbar chrome">
+                                <div class="detail-subtoolbar-left">
+                                    <span
+                                        style="
+                                            color: var(--accent);
+                                            display: inline-flex;
+                                        "
+                                    >
+                                        <svg
+                                            width="13"
+                                            height="13"
+                                            viewBox="0 0 16 16"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="1.5"
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                        >
+                                            <path
+                                                d="M2.8 3.5h7.4a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H3.8a1 1 0 0 1-1-1Z"
+                                            />
+                                            <path
+                                                d="M11.2 5.5h1.5a.5.5 0 0 1 .5.5v6.5a1 1 0 0 1-2 0"
+                                            />
+                                            <line
+                                                x1="4.6"
+                                                y1="6.2"
+                                                x2="9.4"
+                                                y2="6.2"
+                                            />
+                                            <line
+                                                x1="4.6"
+                                                y1="8.4"
+                                                x2="9.4"
+                                                y2="8.4"
+                                            />
+                                            <line
+                                                x1="4.6"
+                                                y1="10.6"
+                                                x2="7.5"
+                                                y2="10.6"
+                                            />
+                                        </svg>
+                                    </span>
+                                    <span
+                                        style="
+                                            font-size: 11.5px;
+                                            color: var(--text-secondary);
+                                        "
+                                        >AI 简报</span
+                                    >
+                                    <span class="detail-meta-dot">·</span>
+                                    <span
+                                        id="briefing-detail-date"
+                                        class="detail-date-sub"
+                                    ></span>
+                                </div>
+                                <div class="briefing-detail-toolbar-model">
+                                    deepseek-v4-pro
+                                </div>
+                            </div>
+                            <div class="detail-body">
+                                <div class="detail-body-inner">
+                                    <div
+                                        class="briefing-period-eyebrow"
+                                        id="briefing-detail-eyebrow"
+                                    ></div>
+                                    <h1
+                                        class="briefing-detail-title"
+                                        id="briefing-detail-title"
+                                    ></h1>
+                                    <p
+                                        class="briefing-leadin-full"
+                                        id="briefing-detail-leadin"
+                                    ></p>
+                                    <div id="briefing-detail-sections"></div>
+                                    <div
+                                        id="briefing-detail-footer"
+                                        class="detail-ai-footer"
+                                        style="margin-top: 36px"
+                                    >
+                                        <span class="ai-spark">
+                                            <svg
+                                                width="13"
+                                                height="13"
+                                                viewBox="0 0 16 16"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="1.5"
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                            >
+                                                <path
+                                                    d="M8 2v3M8 11v3M2 8h3M11 8h3M4.2 4.2l2 2M9.8 9.8l2 2M11.8 4.2l-2 2M6.2 9.8l-2 2"
+                                                />
+                                            </svg>
+                                        </span>
+                                        <div
+                                            id="briefing-detail-footer-text"
+                                        ></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+                <!-- /#content-area -->
+            </div>
+            <!-- /#main-view -->
+        </div>
+        <!-- /#app -->
+    </body>
+</html>
