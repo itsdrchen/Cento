@@ -119,6 +119,10 @@ npm run tauri build   # 注册 Cento.app 的 bundle identifier 到 LaunchService
 
 ↑↑↑这是添加了订阅源之后的主界面形式，文献标题及摘要均自动翻译，也能够抓取第一作者和通讯作者以及第一通讯单位这些主要信息，方便你快速判断这篇文献是否值得精读。右上角可直接跳转文献源网站
 
+![Cento 阅读统计](docs/images/setting_readingstatic_view.png)
+
+↑↑↑还做了统计页面，通过热力图方便看到论文抓取阅读分时间及数量分布
+
 ## 文档入口
 
 - [项目结构](docs/project-structure.md)
