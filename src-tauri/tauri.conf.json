@@ -38,6 +38,9 @@
       "icons/1024x1024.png",
       "icons/cento.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "macOS": {
+      "signingIdentity": "-"
+    }
   }
 }
