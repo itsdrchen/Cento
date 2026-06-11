@@ -1,12 +1,15 @@
 use crate::db::DbState;
 use crate::models::UpdateInfo;
 use crate::services::update_service;
-use tauri::State;
+use tauri::{AppHandle, State};
 
 /// User-initiated update check (settings → 其他设置 → 检查更新).
 #[tauri::command]
-pub async fn check_for_update(state: State<'_, DbState>) -> Result<UpdateInfo, String> {
-    let info = update_service::check().await?;
+pub async fn check_for_update(
+    app: AppHandle,
+    state: State<'_, DbState>,
+) -> Result<UpdateInfo, String> {
+    let info = update_service::check(&app).await?;
     // Stamp the time so the auto-checker's "7-day cadence" stays honest even
     // when the user manually triggers a check in between.
     if let Ok(conn) = state.conn.lock() {

@@ -1,24 +1,41 @@
-// GitHub-based update checker.
+// Update checker.
 //
-// Hits `api.github.com/repos/<owner>/<repo>/releases/latest`, compares the
-// release `tag_name` against `CARGO_PKG_VERSION`, and returns a structured
-// payload the UI can render. No code-signed in-app updater — we just notify
-// the user and point them at the GitHub release page.
+// Reads a JSON manifest from
+//   https://github.com/<owner>/<repo>/releases/latest/download/latest.json
+// which GitHub serves as a CDN-backed stable redirect to the `latest.json`
+// asset attached to the most recent published (non-prerelease) release.
+// The manifest is produced by `.github/workflows/publish-manifest.yml`
+// whenever a release is published.
 //
-// The repo coordinate is fixed at compile time. If a fork wants to point
-// elsewhere, change `REPO_OWNER` / `REPO_NAME` and rebuild.
+// Why this URL instead of api.github.com:
+//   The anonymous REST API limits to 60 requests/hour/IP. Behind shared
+//   egress (CGNAT, corporate NAT, VPN, mobile carrier — common in China)
+//   that budget gets split across many users, so a non-trivial fraction
+//   of update checks would fail with 403 "rate limit exceeded". The
+//   `releases/latest/download/` redirect has no such per-IP cap, so the
+//   check stays reliable no matter how the user's network is configured.
+//
+// Manifest may be missing or stale (CDN propagation, brand-new release
+// before the workflow finishes, GitHub outage). We cache the last good
+// result in the `settings` table and fall back to it on any failure, so
+// the UI never shows a raw error to the user under normal conditions.
 
+use crate::db::DbState;
 use crate::models::UpdateInfo;
 use reqwest::Client;
+use rusqlite::Connection;
 use serde::Deserialize;
+use tauri::{AppHandle, Manager};
 use tracing::warn;
 
 const REPO_OWNER: &str = "itsdrchen";
 const REPO_NAME: &str = "Cento";
 
-fn api_url() -> String {
+const CACHE_KEY: &str = "update_release_cache";
+
+fn manifest_url() -> String {
     format!(
-        "https://api.github.com/repos/{}/{}/releases/latest",
+        "https://github.com/{}/{}/releases/latest/download/latest.json",
         REPO_OWNER, REPO_NAME
     )
 }
@@ -28,21 +45,21 @@ fn releases_page_url() -> String {
 }
 
 #[derive(Deserialize)]
-struct GhRelease {
+struct ReleaseManifest {
     tag_name: String,
     html_url: String,
     body: Option<String>,
     #[serde(default)]
-    assets: Vec<GhAsset>,
+    assets: Vec<ManifestAsset>,
 }
 
 #[derive(Deserialize)]
-struct GhAsset {
+struct ManifestAsset {
     name: String,
     browser_download_url: String,
 }
 
-pub async fn check() -> Result<UpdateInfo, String> {
+pub async fn check(app: &AppHandle) -> Result<UpdateInfo, String> {
     let current_version = env!("CARGO_PKG_VERSION").to_string();
 
     let client = Client::builder()
@@ -54,17 +71,23 @@ pub async fn check() -> Result<UpdateInfo, String> {
         .build()
         .map_err(|e| format!("无法创建网络客户端: {}", e))?;
 
-    let response = client
-        .get(api_url())
-        .header("Accept", "application/vnd.github+json")
-        .send()
-        .await
-        .map_err(|e| format!("无法访问 GitHub: {}", e))?;
+    let response = match client.get(manifest_url()).send().await {
+        Ok(r) => r,
+        Err(e) => {
+            // Network failed — surface the cache if we have one.
+            if let Some(info) = read_cache(app, &current_version) {
+                warn!(error = %e, "更新检查网络失败，使用缓存结果");
+                return Ok(info);
+            }
+            return Err(format!("无法访问 GitHub: {}", e));
+        }
+    };
 
     let status = response.status();
 
-    // 404 = repo has zero releases. Treat as "you're on the latest" instead
-    // of an error so the UI shows a clean "已是最新版" line.
+    // 404 = no published release with a `latest.json` asset yet. Treat as
+    // "you're on the latest" so first-run users see a clean state instead
+    // of an error.
     if status.as_u16() == 404 {
         return Ok(UpdateInfo {
             current_version: current_version.clone(),
@@ -77,20 +100,25 @@ pub async fn check() -> Result<UpdateInfo, String> {
     }
 
     if !status.is_success() {
-        // Rate limit returns 403 — give the user a friendly hint rather than
-        // raw HTTP.
-        if status.as_u16() == 403 {
-            return Err("GitHub 接口请求频率过高，请稍后再试".to_string());
+        if let Some(info) = read_cache(app, &current_version) {
+            warn!("GitHub 返回 {}，使用缓存结果", status.as_u16());
+            return Ok(info);
         }
         return Err(format!("GitHub 返回 {}", status.as_u16()));
     }
 
-    let release: GhRelease = response
-        .json()
-        .await
-        .map_err(|e| format!("解析 GitHub 响应失败: {}", e))?;
+    let manifest: ReleaseManifest = match response.json().await {
+        Ok(m) => m,
+        Err(e) => {
+            if let Some(info) = read_cache(app, &current_version) {
+                warn!(error = %e, "解析更新清单失败，使用缓存结果");
+                return Ok(info);
+            }
+            return Err(format!("解析更新清单失败: {}", e));
+        }
+    };
 
-    let latest_version = release
+    let latest_version = manifest
         .tag_name
         .trim()
         .trim_start_matches('v')
@@ -107,20 +135,24 @@ pub async fn check() -> Result<UpdateInfo, String> {
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     let want_ext = ".AppImage";
 
-    let asset_url = release
+    let asset_url = manifest
         .assets
         .iter()
         .find(|a| a.name.to_lowercase().ends_with(want_ext))
         .map(|a| a.browser_download_url.clone());
 
-    Ok(UpdateInfo {
+    let info = UpdateInfo {
         current_version,
         latest_version,
         has_update,
-        release_url: release.html_url,
-        release_notes: release.body,
+        release_url: manifest.html_url,
+        release_notes: manifest.body,
         asset_url,
-    })
+    };
+
+    write_cache(app, &info);
+
+    Ok(info)
 }
 
 /// Loose semver-style compare: split on `.`, compare numerically per component.
@@ -131,7 +163,6 @@ fn is_newer(candidate: &str, current: &str) -> bool {
     let parse = |s: &str| -> Vec<u32> {
         s.split('.')
             .map(|p| {
-                // strip pre-release/build suffix
                 let cut = p
                     .find(|c: char| !c.is_ascii_digit())
                     .unwrap_or(p.len());
@@ -150,6 +181,47 @@ fn is_newer(candidate: &str, current: &str) -> bool {
         }
     }
     false
+}
+
+// ── Cache helpers ───────────────────────────────────────
+
+fn read_cache(app: &AppHandle, current_version: &str) -> Option<UpdateInfo> {
+    let state = app.state::<DbState>();
+    let conn = state.conn.lock().ok()?;
+    let raw = read_setting(&conn, CACHE_KEY)?;
+    let mut info: UpdateInfo = serde_json::from_str(&raw).ok()?;
+    // `has_update` was computed against the version that was current when
+    // the cache was written. If the app has been upgraded since, that
+    // decision is stale — recompute.
+    info.current_version = current_version.to_string();
+    info.has_update = is_newer(&info.latest_version, current_version);
+    Some(info)
+}
+
+fn write_cache(app: &AppHandle, info: &UpdateInfo) {
+    let state = app.state::<DbState>();
+    let Ok(conn) = state.conn.lock() else { return };
+    if let Ok(json) = serde_json::to_string(info) {
+        let _ = write_setting(&conn, CACHE_KEY, &json);
+    }
+}
+
+fn read_setting(conn: &Connection, key: &str) -> Option<String> {
+    conn.query_row(
+        "SELECT value FROM settings WHERE key = ?1",
+        [key],
+        |row| row.get::<_, String>(0),
+    )
+    .ok()
+}
+
+fn write_setting(conn: &Connection, key: &str, value: &str) -> Result<(), rusqlite::Error> {
+    conn.execute(
+        "INSERT INTO settings (key, value) VALUES (?1, ?2)
+         ON CONFLICT(key) DO UPDATE SET value = ?2",
+        [key, value],
+    )?;
+    Ok(())
 }
 
 #[cfg(test)]
@@ -180,7 +252,7 @@ mod tests {
 pub async fn check_and_notify_if_update(app: &tauri::AppHandle) {
     use tauri::Emitter;
 
-    match check().await {
+    match check(app).await {
         Ok(info) => {
             // Always emit to the frontend so the about card can refresh its
             // "last checked" timestamp and version line.

@@ -111,25 +111,47 @@ pub async fn build_rss_url(query: &str, limit: u32) -> Result<String, String> {
 
 // ── Natural language → PubMed query ────────────
 
-const NL_TO_PUBMED_PROMPT: &str = "\
-You are a PubMed search expert. Convert the user's natural language request into a valid PubMed query string using PubMed's advanced search syntax.
+// Forced model for NL → query conversion. We deliberately ignore the user's
+// general chat-model setting here: deepseek-v4-flash is tuned for throughput
+// and trips on multi-constraint Chinese prompts (journals + MeSH + dates) by
+// finishing with `finish_reason: length` before any output is emitted. The
+// "pro" variant handles the structured-reasoning step reliably.
+const NL_QUERY_MODEL: &str = "deepseek-v4-pro";
 
-Important rules:
-- Use proper field tags: [Title], [Title/Abstract], [Author], [Journal], [Publication Type], [MeSH Terms], [dp]
-- Use uppercase boolean operators: AND, OR, NOT
-- Use parentheses for grouping logic
-- Use quotes around exact phrases
-- For clinical trials: \"clinical trial\"[Publication Type] OR \"randomized controlled trial\"[Publication Type]
-- For reviews: \"review\"[Publication Type] OR \"systematic review\"[Publication Type] OR \"meta-analysis\"[Publication Type]
-- For recent publications: \"last N years\"[dp] or \"last N days\"[dp]
-- Default field is [Title/Abstract] if no field is specified
-- For journal names, use the journal's full name or NLM abbreviation (without [Journal] tag)
+// Generous ceiling. PubMed queries are short, but the model may emit a few
+// tokens of internal reasoning before the final string, and complex requests
+// (5+ journals OR'd together, multiple MeSH groups, date filters) can easily
+// push the actual query past 500 tokens. 1500 leaves a safety margin without
+// being wasteful.
+const NL_QUERY_MAX_TOKENS: u32 = 1500;
+
+const NL_TO_PUBMED_PROMPT: &str = "\
+You are a PubMed search expert. Convert a researcher's natural-language request \
+(which may be a single complete sentence in Chinese or English, not just keywords) \
+into a valid PubMed advanced-search query string.
+
+Understand intent before translating:
+- Identify the core topic(s), target journal(s), publication type(s), and time window from the sentence as a whole.
+- Map informal Chinese terms to their standard English biomedical vocabulary (e.g. 巨噬细胞 → macrophage, 铁死亡 → ferroptosis, 肿瘤微环境 → tumor microenvironment, 单细胞测序 → single-cell sequencing).
+- Map journal aliases to PubMed-recognized titles: Nature/自然 → Nature; Science/科学 → Science; Cell/细胞 → Cell; NEJM → \"N Engl J Med\"; Lancet/柳叶刀 → Lancet; JAMA → JAMA; Nat Med → \"Nat Med\"; etc. Group multiple journals with OR inside parentheses.
+- Interpret time hints: 最新/近期/recent → \"last 1 years\"[dp]; 近 N 年 → \"last N years\"[dp]; 近 N 天 → \"last N days\"[dp]. If a time hint is implied but not explicit (e.g. 最新), default to \"last 2 years\"[dp].
+
+Syntax rules:
+- Field tags: [Title], [Title/Abstract], [Author], [Journal], [Publication Type], [MeSH Terms], [dp]
+- Booleans uppercase: AND, OR, NOT
+- Parentheses for grouping; quotes around multi-word phrases and journal abbreviations.
+- Topic terms default to [Title/Abstract] when no field is given, with [MeSH Terms] OR'd in for well-known concepts.
+- Clinical trials: \"clinical trial\"[Publication Type] OR \"randomized controlled trial\"[Publication Type]
+- Reviews: \"review\"[Publication Type] OR \"systematic review\"[Publication Type] OR \"meta-analysis\"[Publication Type]
+- Journal filter form: (\"Nature\"[Journal] OR \"Science\"[Journal] OR \"Cell\"[Journal])
+
+Example:
+Input: 帮我检索发表在 nature、science、cell 上的关于巨噬细胞以及铁死亡相关的最新的文章
+Output: (\"Nature\"[Journal] OR \"Science\"[Journal] OR \"Cell\"[Journal]) AND ((macrophage[Title/Abstract] OR macrophages[MeSH Terms]) AND (ferroptosis[Title/Abstract] OR ferroptosis[MeSH Terms])) AND \"last 2 years\"[dp]
 
 Output format:
-- Return ONLY the PubMed query string, nothing else
-- No markdown code blocks, no explanation, no quotes around the entire result
-- The query should be ready to paste directly into PubMed's search box
-- If the request is unclear, make your best guess and still return a query";
+- Return ONLY the PubMed query string on a single line. No markdown, no explanation, no surrounding quotes.
+- If the request is ambiguous, make your best guess and still return a query.";
 
 pub async fn natural_language_to_query(
     settings: &DeepSeekSettings,
@@ -141,13 +163,13 @@ pub async fn natural_language_to_query(
     );
 
     let body = serde_json::json!({
-        "model": settings.model,
+        "model": NL_QUERY_MODEL,
         "messages": [
             {"role": "system", "content": NL_TO_PUBMED_PROMPT},
             {"role": "user", "content": text}
         ],
         "temperature": 0.1,
-        "max_tokens": 500
+        "max_tokens": NL_QUERY_MAX_TOKENS
     });
 
     let client = reqwest::Client::builder()
@@ -189,19 +211,33 @@ pub async fn natural_language_to_query(
             let snippet = serde_json::to_string(&response_body)
                 .unwrap_or_else(|_| "无法序列化".to_string());
             let truncated: String = snippet.chars().take(300).collect();
-            format!("AI 响应格式异常（模型 {}），响应: {}", settings.model, truncated)
+            format!("AI 响应格式异常（模型 {}），响应: {}", NL_QUERY_MODEL, truncated)
         })?
         .trim()
         .to_string();
 
+    let finish_reason = response_body["choices"][0]["finish_reason"]
+        .as_str()
+        .unwrap_or("");
+
     if content.is_empty() {
-        let finish_reason = response_body["choices"][0]["finish_reason"]
-            .as_str()
-            .unwrap_or("未知");
         return Err(format!(
-            "AI 返回空结果（模型 {}, finish_reason: {}），请尝试简化检索描述或检查模型设置",
-            settings.model, finish_reason
+            "AI 返回空结果（模型 {}, finish_reason: {}）。请尝试简化检索描述，或在「设置 → 翻译」中确认 base_url/API Key 支持该模型。",
+            NL_QUERY_MODEL,
+            if finish_reason.is_empty() { "未知" } else { finish_reason }
         ));
+    }
+
+    // `length` means the model was still generating when it hit max_tokens.
+    // The partial string is usually still a valid PubMed expression (the
+    // tail just gets clipped), so surface it instead of failing outright.
+    // PubMed itself will tell the user if the syntax is broken.
+    if finish_reason == "length" {
+        tracing::warn!(
+            model = NL_QUERY_MODEL,
+            max_tokens = NL_QUERY_MAX_TOKENS,
+            "NL→PubMed: response truncated at max_tokens, returning partial query"
+        );
     }
 
     Ok(content)

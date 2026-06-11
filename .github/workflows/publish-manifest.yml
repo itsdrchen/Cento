@@ -1,0 +1,76 @@
+name: Publish Update Manifest
+
+# Generates `latest.json` and attaches it to the release as an asset whenever
+# a release is published (not on draft creation — `build.yml` creates drafts,
+# the user reviews and publishes, *then* this fires).
+#
+# Why this exists: the in-app updater reads
+#   https://github.com/<owner>/<repo>/releases/latest/download/latest.json
+# which is a stable redirect GitHub serves from its CDN, with no per-IP rate
+# limit (unlike api.github.com's 60/hour for anonymous calls). This is what
+# lets the update check stay reliable when many users share an egress IP.
+#
+# `gh api` here uses GITHUB_TOKEN, so it gets the authenticated 5000/hour
+# budget — no rate-limit concern for the workflow itself.
+
+on:
+  release:
+    types: [published]
+  # Allow re-running manually against an existing tag if the manifest needs
+  # to be regenerated (e.g. asset names changed after publish).
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to regenerate manifest for (e.g. v0.3.0)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  publish-manifest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve tag
+        id: tag
+        env:
+          EVENT_TAG: ${{ github.event.release.tag_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          TAG="${EVENT_TAG:-$INPUT_TAG}"
+          if [ -z "$TAG" ]; then
+            echo "No tag resolved from release event or workflow input" >&2
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Generate latest.json
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          # Slim the GitHub API release object down to the fields the client
+          # cares about. The shape mirrors what the old code parsed from
+          # api.github.com so the Rust deserialization stays simple.
+          gh api "/repos/${REPO}/releases/tags/${TAG}" \
+            | jq '{
+                tag_name,
+                html_url,
+                body,
+                published_at,
+                assets: [.assets[]
+                  | select(.name != "latest.json")
+                  | {name, browser_download_url}]
+              }' > latest.json
+          echo "----- latest.json -----"
+          cat latest.json
+
+      - name: Upload manifest to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        # --clobber lets re-runs replace the existing manifest instead of
+        # erroring on the duplicate filename.
+        run: gh release upload "$TAG" latest.json --clobber --repo "$REPO"
