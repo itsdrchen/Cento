@@ -1,10 +1,17 @@
 use rusqlite::Connection;
 use std::fs;
 use std::path::PathBuf;
+use std::sync::atomic::AtomicBool;
 use std::sync::Mutex;
 
 pub struct DbState {
     pub conn: Mutex<Connection>,
+    /// Set to true while `briefing_service::generate_briefing` is in flight.
+    /// Prevents the user from kicking off a second briefing (by clicking the
+    /// button again while the first request is still pending against the slow
+    /// DeepSeek API) — which used to silently produce 5-10 duplicate rows
+    /// covering the same period.
+    pub briefing_in_flight: AtomicBool,
 }
 
 fn schema_sql() -> &'static str {
@@ -159,6 +166,7 @@ pub fn initialize(app_data_dir: PathBuf) -> Result<DbState, String> {
 
     Ok(DbState {
         conn: Mutex::new(conn),
+        briefing_in_flight: AtomicBool::new(false),
     })
 }
 

@@ -1812,7 +1812,29 @@ function computeNextBriefingDate() {
   return `${next.getFullYear()}/${next.getMonth()+1}/${next.getDate()} ${hour}`;
 }
 
+// Module-scoped flag so a generation in flight blocks both
+//   (a) repeat clicks on the "立即生成" button, and
+//   (b) a scheduler tick that fires while a manual run is mid-flight.
+// The backend has its own AtomicBool guard which is the source of truth; this
+// client-side flag is the UX layer that lets us toggle the button label.
+let briefingInFlight = false;
+
 async function generateBriefingNow() {
+  if (briefingInFlight) {
+    // User clicked again before the previous call finished. Silently no-op
+    // rather than queueing — duplicate briefings were the original bug.
+    return;
+  }
+  briefingInFlight = true;
+
+  const btn = document.getElementById('btn-generate-briefing');
+  const originalBtnHTML = btn?.innerHTML;
+  if (btn) {
+    btn.disabled = true;
+    btn.classList.add('is-loading');
+    btn.innerHTML = '<span class="spinner"></span> 生成中…';
+  }
+
   setGlobalStatus('正在生成简报…', 'progress');
   // Stamp last-attempt so the scheduler doesn't retry the same failure every
   // tick — wait at least an hour after a failure to try again.
@@ -1828,6 +1850,13 @@ async function generateBriefingNow() {
     if (b) selectBriefing(b.id);
   } catch (e) {
     setGlobalStatus('简报生成失败: ' + e, 'error');
+  } finally {
+    briefingInFlight = false;
+    if (btn) {
+      btn.disabled = false;
+      btn.classList.remove('is-loading');
+      if (originalBtnHTML != null) btn.innerHTML = originalBtnHTML;
+    }
   }
 }
 
@@ -1880,6 +1909,12 @@ function computeMostRecentExpectedFiring(freq, hour, day) {
 
 function briefingSchedulerTick() {
   if (localStorage.getItem('briefing-enabled') === '0') return;
+  // If a generation is already running (manual click or a previous tick that
+  // hasn't returned), do not fire another one. Belt-and-suspenders: the
+  // backend AtomicBool would reject the duplicate anyway, but bailing out
+  // here keeps the spinner state coherent and avoids a misleading
+  // "已有简报正在生成中" error in the status bar.
+  if (briefingInFlight) return;
 
   const freq = localStorage.getItem('briefing-frequency') || 'weekly';
   const hour = localStorage.getItem('briefing-hour') || '09:00';

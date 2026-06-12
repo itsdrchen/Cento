@@ -1,6 +1,6 @@
 [package]
 name = "cento"
-version = "0.4.0"
+version = "0.4.1"
 description = "Cento — a lightweight macOS-style RSS reader with Chinese translation via DeepSeek"
 authors = ["itsdrchen <44201097+itsdrchen@users.noreply.github.com>"]
 edition = "2021"

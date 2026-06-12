@@ -8,10 +8,28 @@ use crate::services::{settings_service, translate_service};
 use rusqlite::Connection;
 use serde::Deserialize;
 use serde_json::Value;
+use std::sync::atomic::{AtomicBool, Ordering};
 use tracing::{info, warn};
 
 const BRIEFING_WINDOW_DAYS: i64 = 7;
-const MAX_ARTICLES_IN_PROMPT: usize = 60;
+// Capping the article count caps the prompt size, which is the dominant
+// factor in DeepSeek latency for briefings. 60 routinely pushed end-to-end
+// generation past a minute, making users think the click didn't register
+// and triggering duplicate manual triggers. 40 still produces a rich-enough
+// overview while shaving roughly a third off wall-clock time.
+const MAX_ARTICLES_IN_PROMPT: usize = 40;
+
+/// RAII guard that clears `briefing_in_flight` on drop, so any return path —
+/// early `?`, normal `Ok`, panic — releases the lock. Without this we'd risk
+/// stranding the flag `true` forever after a transient failure and locking
+/// the user out of new briefings until app restart.
+struct InFlightGuard<'a>(&'a AtomicBool);
+
+impl Drop for InFlightGuard<'_> {
+    fn drop(&mut self) {
+        self.0.store(false, Ordering::SeqCst);
+    }
+}
 
 /// Editorial guidance — the *how to write* part. Replaceable by the user via
 /// the 「AI 简报 → Prompt」 textarea. Mirrors `DEFAULT_BRIEFING_PROMPT` in
@@ -116,6 +134,17 @@ pub async fn generate_briefing(
     state: &DbState,
     custom_guidance: Option<String>,
 ) -> Result<Briefing, String> {
+    // Reject overlapping calls. swap returns the previous value, so if a
+    // generation is already in flight we get `true` and bail out without
+    // hitting DeepSeek again. This is the definitive guard against the
+    // "user clicked the button 6 times during the 60-second wait → 6 duplicate
+    // briefings" pathology; the frontend button-disabled state is a UX
+    // companion, not the source of truth.
+    if state.briefing_in_flight.swap(true, Ordering::SeqCst) {
+        return Err("已有简报正在生成中，请稍候".to_string());
+    }
+    let _guard = InFlightGuard(&state.briefing_in_flight);
+
     let (entries, settings, period_label) = {
         let conn = state.conn.lock().map_err(|e| e.to_string())?;
         let settings = settings_service::get_settings(&conn);
